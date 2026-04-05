@@ -1,0 +1,12 @@
+Flask==3.1.0
+Flask-SQLAlchemy==3.1.1
+Flask-JWT-Extended==4.7.1
+Flask-Caching==2.3.0
+Flask-Mail==0.10.0
+Flask-Migrate==4.1.0
+Flask-Cors==5.0.1
+python-dotenv==1.0.1
+celery==5.4.0
+redis==5.2.1
+SQLAlchemy==2.0.38
+Werkzeug==3.1.3

@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HMS V2</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div id="app" class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3 mb-0">Hospital Management System V2</h1>
+      <div v-if="state.user" class="d-flex align-items-center gap-2">
+        <span class="badge text-bg-primary text-uppercase">{{ state.user.role }}</span>
+        <button class="btn btn-sm btn-outline-danger" @click="logout">Logout</button>
+      </div>
+    </div>
+
+    <div v-if="state.error" class="alert alert-danger">{{ state.error }}</div>
+    <div v-if="state.info" class="alert alert-info">{{ state.info }}</div>
+
+    <component
+      :is="currentComponent"
+      :state="state"
+      @login="onLogin"
+      @register="registerPatient"
+      @load-admin="loadAdminData"
+      @load-doctor="loadDoctorData"
+      @load-patient="loadPatientData"
+      @api="api"
+    ></component>
+  </div>
+
+  <script type="text/x-template" id="login-template">
+    <div class="row justify-content-center">
+      <div class="col-md-5">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Login</h2>
+            <div class="mb-3">
+              <label class="form-label">Username or Email</label>
+              <input v-model="form.username" class="form-control" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input v-model="form.password" type="password" class="form-control" />
+            </div>
+            <button class="btn btn-primary w-100" @click="submit">Login</button>
+            <button class="btn btn-link w-100 mt-2" @click="$emit('register')">New patient? Register</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script type="text/x-template" id="register-template">
+    <div class="row justify-content-center">
+      <div class="col-md-7">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Patient Registration</h2>
+            <div class="row g-2">
+              <div class="col-md-6"><input v-model="form.username" class="form-control" placeholder="Username" /></div>
+              <div class="col-md-6"><input v-model="form.email" class="form-control" placeholder="Email" /></div>
+              <div class="col-md-6"><input v-model="form.password" type="password" class="form-control" placeholder="Password" /></div>
+              <div class="col-md-6"><input v-model="form.name" class="form-control" placeholder="Full Name" /></div>
+              <div class="col-md-6"><input v-model="form.contact" class="form-control" placeholder="Contact" /></div>
+              <div class="col-md-6"><input v-model="form.date_of_birth" type="date" class="form-control" /></div>
+              <div class="col-12"><input v-model="form.address" class="form-control" placeholder="Address" /></div>
+            </div>
+            <button class="btn btn-success mt-3" @click="submit">Register</button>
+            <button class="btn btn-link mt-3" @click="$emit('register')">Back to login</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script type="text/x-template" id="admin-template">
+    <div>
+      <h2 class="h5 mb-3">Admin Dashboard</h2>
+      <div class="row g-3 mb-3">
+        <div class="col-md-4"><div class="card"><div class="card-body"><h3 class="h6">Doctors</h3><p class="display-6">{{ state.admin.summary.total_doctors || 0 }}</p></div></div></div>
+        <div class="col-md-4"><div class="card"><div class="card-body"><h3 class="h6">Patients</h3><p class="display-6">{{ state.admin.summary.total_patients || 0 }}</p></div></div></div>
+        <div class="col-md-4"><div class="card"><div class="card-body"><h3 class="h6">Appointments</h3><p class="display-6">{{ state.admin.summary.total_appointments || 0 }}</p></div></div></div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h3 class="h6">Add Doctor</h3>
+          <div class="row g-2">
+            <div class="col-md-2"><input v-model="doctorForm.name" class="form-control" placeholder="Name" /></div>
+            <div class="col-md-2"><input v-model="doctorForm.email" class="form-control" placeholder="Email" /></div>
+            <div class="col-md-2"><input v-model="doctorForm.temp_password" class="form-control" placeholder="Temp Password" /></div>
+            <div class="col-md-2"><input v-model="doctorForm.specialization" class="form-control" placeholder="Specialization" /></div>
+            <div class="col-md-2"><input v-model.number="doctorForm.experience_years" type="number" class="form-control" placeholder="Exp Years" /></div>
+            <div class="col-md-2">
+              <select v-model.number="doctorForm.department_id" class="form-select">
+                <option :value="null">Department</option>
+                <option v-for="d in state.admin.departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+              </select>
+            </div>
+            <div class="col-12"><textarea v-model="doctorForm.bio" class="form-control" placeholder="Bio"></textarea></div>
+          </div>
+          <button class="btn btn-primary mt-2" @click="addDoctor">Add Doctor</button>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h3 class="h6">Search</h3>
+          <div class="input-group mb-2">
+            <input v-model="search.q" class="form-control" placeholder="Search doctor/patient" />
+            <select v-model="search.type" class="form-select" style="max-width:160px">
+              <option value="both">Both</option>
+              <option value="doctor">Doctor</option>
+              <option value="patient">Patient</option>
+            </select>
+            <button class="btn btn-outline-primary" @click="searchEntity">Search</button>
+          </div>
+          <ul class="list-group" v-if="state.admin.searchResults.length">
+            <li class="list-group-item" v-for="r in state.admin.searchResults" :key="r.type + '-' + r.id">
+              <strong>{{ r.type }}</strong> - {{ r.name }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body table-responsive">
+          <h3 class="h6">Doctors</h3>
+          <table class="table table-sm table-bordered align-middle">
+            <thead><tr><th>Name</th><th>Email</th><th>Specialization</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr v-for="d in state.admin.doctors" :key="d.id">
+                <td>{{ d.name }}</td><td>{{ d.email }}</td><td>{{ d.specialization }}</td><td>{{ d.department }}</td>
+                <td><span class="badge" :class="d.is_active ? 'text-bg-success' : 'text-bg-secondary'">{{ d.is_active ? 'Active' : 'Blacklisted' }}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-outline-warning me-1" @click="editDoctor(d)">Edit</button>
+                  <button class="btn btn-sm btn-outline-danger" @click="blacklistDoctor(d.id)">Blacklist</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body table-responsive">
+          <h3 class="h6">Patients</h3>
+          <table class="table table-sm table-bordered align-middle">
+            <thead><tr><th>Name</th><th>Email</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr v-for="p in state.admin.patients" :key="p.id">
+                <td>{{ p.name }}</td><td>{{ p.email }}</td><td>{{ p.contact }}</td>
+                <td><span class="badge" :class="p.is_active ? 'text-bg-success' : 'text-bg-secondary'">{{ p.is_active ? 'Active' : 'Blacklisted' }}</span></td>
+                <td><button class="btn btn-sm btn-outline-danger" @click="blacklistPatient(p.id)">Blacklist</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body table-responsive">
+          <h3 class="h6">All Appointments</h3>
+          <table class="table table-sm table-striped align-middle">
+            <thead><tr><th>Patient</th><th>Doctor</th><th>Department</th><th>Date</th><th>Status</th><th>View</th></tr></thead>
+            <tbody>
+              <tr v-for="a in state.admin.appointments" :key="a.id">
+                <td>{{ a.patient_name }}</td><td>{{ a.doctor_name }}</td><td>{{ a.department }}</td><td>{{ a.date }} {{ a.time_slot }}</td><td>{{ a.status }}</td>
+                <td><button class="btn btn-sm btn-outline-primary" @click="viewAppointment(a)">View</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script type="text/x-template" id="doctor-template">
+    <div>
+      <h2 class="h5 mb-3">Doctor Dashboard</h2>
+      <div class="card mb-3">
+        <div class="card-body table-responsive">
+          <h3 class="h6">Upcoming Appointments (Today + This Week)</h3>
+          <table class="table table-sm table-bordered">
+            <thead><tr><th>Patient</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr v-for="a in state.doctor.upcoming" :key="a.id">
+                <td>{{ a.patient_name }}</td><td>{{ a.date }}</td><td>{{ a.time_slot }}</td><td>{{ a.status }}</td>
+                <td>
+                  <button class="btn btn-sm btn-success me-1" :disabled="a.status !== 'Booked'" @click="complete(a.id)">Complete</button>
+                  <button class="btn btn-sm btn-warning me-1" :disabled="a.status !== 'Booked'" @click="cancel(a.id)">Cancel</button>
+                  <button class="btn btn-sm btn-outline-primary" @click="selectTreatment(a.id)">Treatment</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h3 class="h6">Treatment Details</h3>
+          <div class="row g-2">
+            <div class="col-md-3"><input v-model.number="treatment.appointment_id" type="number" class="form-control" placeholder="Appointment ID" /></div>
+            <div class="col-md-3"><input v-model="treatment.next_visit_date" type="date" class="form-control" /></div>
+            <div class="col-md-6"><input v-model="treatment.diagnosis" class="form-control" placeholder="Diagnosis" /></div>
+            <div class="col-md-6"><input v-model="treatment.prescription" class="form-control" placeholder="Prescription" /></div>
+            <div class="col-md-6"><input v-model="treatment.notes" class="form-control" placeholder="Notes" /></div>
+          </div>
+          <button class="btn btn-primary mt-2" @click="saveTreatment">Save Treatment</button>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h3 class="h6">Assigned Patients</h3>
+          <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center" v-for="p in state.doctor.patients" :key="p.id">
+              <span>{{ p.name }} ({{ p.contact }})</span>
+              <button class="btn btn-sm btn-outline-secondary" @click="history(p.id)">View History</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <h3 class="h6">7-Day Availability Grid</h3>
+          <div class="row g-2" v-for="row in availabilityRows" :key="row.date">
+            <div class="col-md-2"><input class="form-control" :value="row.date" readonly /></div>
+            <div class="col-md-2"><input class="form-control" v-model="row.morning_start" placeholder="Morning start" /></div>
+            <div class="col-md-2"><input class="form-control" v-model="row.morning_end" placeholder="Morning end" /></div>
+            <div class="col-md-2"><input class="form-control" v-model="row.evening_start" placeholder="Evening start" /></div>
+            <div class="col-md-2"><input class="form-control" v-model="row.evening_end" placeholder="Evening end" /></div>
+          </div>
+          <button class="btn btn-primary mt-3" @click="saveAvailability">Save Availability</button>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script type="text/x-template" id="patient-template">
+    <div>
+      <h2 class="h5 mb-3">Patient Dashboard</h2>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h3 class="h6">Departments</h3>
+          <div class="row g-2">
+            <div class="col-md-4" v-for="d in state.patient.departments" :key="d.id">
+              <div class="border rounded p-2 h-100">
+                <h4 class="h6">{{ d.name }}</h4>
+                <p class="small mb-2">{{ d.description }}</p>
+                <button class="btn btn-sm btn-outline-primary" @click="state.info = d.description">View Details</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h3 class="h6">Doctors and Availability (Next 7 Days)</h3>
+          <div class="input-group mb-2">
+            <input v-model="doctorSearch" class="form-control" placeholder="Filter by specialization or name" />
+            <button class="btn btn-outline-primary" @click="loadDoctors">Search</button>
+          </div>
+          <div class="accordion" id="doctorsAccordion">
+            <div class="accordion-item" v-for="d in state.patient.doctors" :key="d.id">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" :data-bs-target="'#doc-' + d.id">
+                  {{ d.name }} - {{ d.specialization }} ({{ d.department }})
+                </button>
+              </h2>
+              <div :id="'doc-' + d.id" class="accordion-collapse collapse" data-bs-parent="#doctorsAccordion">
+                <div class="accordion-body">
+                  <ul class="list-group mb-2">
+                    <li class="list-group-item" v-for="a in (state.patient.availability[d.id] || [])" :key="a.date + d.id">
+                      {{ a.date }} | Morning: {{ a.morning_start || '-' }}-{{ a.morning_end || '-' }} | Evening: {{ a.evening_start || '-' }}-{{ a.evening_end || '-' }}
+                    </li>
+                  </ul>
+                  <div class="row g-2">
+                    <div class="col-md-3"><input v-model="booking.date" type="date" class="form-control" /></div>
+                    <div class="col-md-3"><input v-model="booking.time_slot" class="form-control" placeholder="Time slot" /></div>
+                    <div class="col-md-3">
+                      <select v-model.number="booking.department_id" class="form-select">
+                        <option :value="null">Department</option>
+                        <option v-for="dep in state.patient.departments" :key="dep.id" :value="dep.id">{{ dep.name }}</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3"><button class="btn btn-primary w-100" @click="book(d.id)">Book</button></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body table-responsive">
+          <h3 class="h6">Upcoming Appointments</h3>
+          <table class="table table-sm table-bordered">
+            <thead><tr><th>Doctor</th><th>Department</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr v-for="a in state.patient.upcoming" :key="a.id">
+                <td>{{ a.doctor_name }}</td><td>{{ a.department }}</td><td>{{ a.date }}</td><td>{{ a.time_slot }}</td><td>{{ a.status }}</td>
+                <td><button class="btn btn-sm btn-outline-danger" :disabled="a.status !== 'Booked'" @click="cancel(a.id)">Cancel</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body table-responsive">
+          <h3 class="h6">Past Appointments with Treatment</h3>
+          <table class="table table-sm table-striped">
+            <thead><tr><th>Date</th><th>Doctor</th><th>Diagnosis</th><th>Prescription</th></tr></thead>
+            <tbody>
+              <tr v-for="a in state.patient.history" :key="a.id">
+                <td>{{ a.date }}</td><td>{{ a.doctor_name }}</td><td>{{ a.diagnosis || '-' }}</td><td>{{ a.prescription || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h3 class="h6">Edit Profile</h3>
+          <div class="row g-2">
+            <div class="col-md-3"><input v-model="profile.name" class="form-control" placeholder="Name" /></div>
+            <div class="col-md-3"><input v-model="profile.contact" class="form-control" placeholder="Contact" /></div>
+            <div class="col-md-3"><input v-model="profile.date_of_birth" type="date" class="form-control" /></div>
+            <div class="col-md-3"><input v-model="profile.address" class="form-control" placeholder="Address" /></div>
+          </div>
+          <button class="btn btn-primary mt-2" @click="saveProfile">Update Profile</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <h3 class="h6 mb-1">Export Appointment CSV</h3>
+            <p class="small mb-0">Trigger async export and get status by task ID</p>
+          </div>
+          <button class="btn btn-success" @click="exportCsv">Export</button>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script>
+    const Login = {
+      template: '#login-template',
+      data() { return { form: { username: '', password: '' } }; },
+      methods: {
+        submit() { this.$emit('login', { ...this.form }); }
+      }
+    };
+
+    const Register = {
+      template: '#register-template',
+      data() {
+        return { form: { username: '', email: '', password: '', name: '', contact: '', date_of_birth: '', address: '' } };
+      },
+      methods: {
+        async submit() { await this.$emit('api', { method: 'POST', path: '/api/auth/register', body: this.form, message: 'Registered successfully. Please login.' }); this.$emit('register'); }
+      }
+    };
+
+    const AdminDashboard = {
+      template: '#admin-template',
+      props: ['state'],
+      data() {
+        return {
+          doctorForm: { name: '', email: '', temp_password: '', specialization: '', department_id: null, experience_years: 0, bio: '' },
+          search: { type: 'both', q: '' }
+        };
+      },
+      mounted() { this.$emit('load-admin'); },
+      methods: {
+        async addDoctor() {
+          const ok = await this.$emit('api', { method: 'POST', path: '/api/admin/doctors', body: this.doctorForm, message: 'Doctor added' });
+          if (ok !== false) this.$emit('load-admin');
+        },
+        async blacklistDoctor(id) { await this.$emit('api', { method: 'DELETE', path: `/api/admin/doctors/${id}`, message: 'Doctor blacklisted' }); this.$emit('load-admin'); },
+        async blacklistPatient(id) { await this.$emit('api', { method: 'DELETE', path: `/api/admin/patients/${id}`, message: 'Patient blacklisted' }); this.$emit('load-admin'); },
+        async editDoctor(d) {
+          const payload = { name: d.name, specialization: d.specialization, department_id: d.department_id, experience_years: d.experience_years, bio: d.bio || '' };
+          await this.$emit('api', { method: 'PUT', path: `/api/admin/doctors/${d.id}`, body: payload, message: 'Doctor updated' });
+          this.$emit('load-admin');
+        },
+        async searchEntity() {
+          const data = await this.$emit('api', { method: 'GET', path: `/api/admin/search?type=${this.search.type}&q=${encodeURIComponent(this.search.q)}` });
+          if (Array.isArray(data)) this.state.admin.searchResults = data;
+        },
+        viewAppointment(a) { this.state.info = `Appointment #${a.id}: ${a.patient_name} with ${a.doctor_name} (${a.status})`; }
+      }
+    };
+
+    const DoctorDashboard = {
+      template: '#doctor-template',
+      props: ['state'],
+      data() {
+        return {
+          treatment: { appointment_id: null, diagnosis: '', prescription: '', notes: '', next_visit_date: '' },
+          availabilityRows: []
+        };
+      },
+      mounted() { this.$emit('load-doctor'); this.seedAvailability(); this.loadAvailability(); },
+      methods: {
+        seedAvailability() {
+          this.availabilityRows = [];
+          const now = new Date();
+          for (let i = 0; i <= 7; i += 1) {
+            const d = new Date(now);
+            d.setDate(now.getDate() + i);
+            this.availabilityRows.push({ date: d.toISOString().slice(0, 10), morning_start: '', morning_end: '', evening_start: '', evening_end: '' });
+          }
+        },
+        async loadAvailability() {
+          const data = await this.$emit('api', { method: 'GET', path: '/api/doctor/availability' });
+          if (Array.isArray(data)) {
+            data.forEach((r) => {
+              const row = this.availabilityRows.find((x) => x.date === r.date);
+              if (row) Object.assign(row, r);
+            });
+          }
+        },
+        async complete(id) { await this.$emit('api', { method: 'PUT', path: `/api/doctor/appointments/${id}/complete`, message: 'Marked completed' }); this.$emit('load-doctor'); },
+        async cancel(id) { await this.$emit('api', { method: 'PUT', path: `/api/doctor/appointments/${id}/cancel`, message: 'Marked cancelled' }); this.$emit('load-doctor'); },
+        selectTreatment(id) { this.treatment.appointment_id = id; },
+        async saveTreatment() {
+          if (!this.treatment.appointment_id) return;
+          await this.$emit('api', { method: 'POST', path: `/api/doctor/appointments/${this.treatment.appointment_id}/treatment`, body: this.treatment, message: 'Treatment saved' });
+          this.$emit('load-doctor');
+        },
+        async history(patientId) {
+          const data = await this.$emit('api', { method: 'GET', path: `/api/doctor/patients/${patientId}/history` });
+          if (Array.isArray(data)) this.state.info = `History records: ${data.length}`;
+        },
+        async saveAvailability() {
+          await this.$emit('api', { method: 'POST', path: '/api/doctor/availability', body: { availability: this.availabilityRows }, message: 'Availability saved' });
+          await this.loadAvailability();
+        }
+      }
+    };
+
+    const PatientDashboard = {
+      template: '#patient-template',
+      props: ['state'],
+      data() {
+        return {
+          doctorSearch: '',
+          booking: { date: '', time_slot: '', department_id: null },
+          profile: { name: '', contact: '', date_of_birth: '', address: '' },
+          latestTaskId: ''
+        };
+      },
+      mounted() { this.$emit('load-patient'); this.loadDoctors(); },
+      methods: {
+        async loadDoctors() {
+          const data = await this.$emit('api', { method: 'GET', path: `/api/patient/doctors?q=${encodeURIComponent(this.doctorSearch)}` });
+          if (Array.isArray(data)) {
+            this.state.patient.doctors = data;
+            for (const doc of data) {
+              const details = await this.$emit('api', { method: 'GET', path: `/api/patient/doctors/${doc.id}` });
+              if (details && details.availability) this.state.patient.availability[doc.id] = details.availability;
+            }
+          }
+        },
+        async book(doctorId) {
+          const payload = { doctor_id: doctorId, department_id: this.booking.department_id, date: this.booking.date, time_slot: this.booking.time_slot };
+          const res = await this.$emit('api', { method: 'POST', path: '/api/patient/appointments', body: payload, message: 'Appointment booked' });
+          if (res !== false) this.$emit('load-patient');
+        },
+        async cancel(id) { await this.$emit('api', { method: 'DELETE', path: `/api/patient/appointments/${id}`, message: 'Appointment cancelled' }); this.$emit('load-patient'); },
+        async saveProfile() { await this.$emit('api', { method: 'PUT', path: '/api/patient/profile', body: this.profile, message: 'Profile updated' }); },
+        async exportCsv() {
+          const data = await this.$emit('api', { method: 'GET', path: '/api/patient/export-csv', message: 'CSV export triggered' });
+          if (data && data.task_id) {
+            this.latestTaskId = data.task_id;
+            setTimeout(async () => {
+              const status = await this.$emit('api', { method: 'GET', path: `/api/patient/export-csv/status/${this.latestTaskId}` });
+              if (status && status.state) this.state.info = `CSV Task ${status.state}. ${status.download_link || ''}`;
+            }, 3000);
+          }
+        }
+      }
+    };
+
+    const app = Vue.createApp({
+      data() {
+        return {
+          state: {
+            token: null,
+            user: null,
+            view: 'login',
+            error: '',
+            info: '',
+            admin: { summary: {}, doctors: [], patients: [], appointments: [], departments: [], searchResults: [] },
+            doctor: { upcoming: [], patients: [] },
+            patient: { departments: [], doctors: [], availability: {}, upcoming: [], history: [] }
+          }
+        };
+      },
+      computed: {
+        currentComponent() {
+          if (this.state.view === 'register') return Register;
+          if (this.state.view === 'admin') return AdminDashboard;
+          if (this.state.view === 'doctor') return DoctorDashboard;
+          if (this.state.view === 'patient') return PatientDashboard;
+          return Login;
+        }
+      },
+      methods: {
+        async api({ method, path, body, message }) {
+          this.state.error = '';
+          this.state.info = '';
+          const headers = { 'Content-Type': 'application/json' };
+          if (this.state.token) headers.Authorization = `Bearer ${this.state.token}`;
+
+          const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            this.state.error = data.error || 'Request failed';
+            return false;
+          }
+          if (message) this.state.info = message;
+          return data;
+        },
+        async onLogin(form) {
+          const data = await this.api({ method: 'POST', path: '/api/auth/login', body: form });
+          if (!data) return;
+          this.state.token = data.access_token;
+          this.state.user = data.user;
+          if (data.user.role === 'admin') { this.state.view = 'admin'; await this.loadAdminData(); }
+          if (data.user.role === 'doctor') { this.state.view = 'doctor'; await this.loadDoctorData(); }
+          if (data.user.role === 'patient') { this.state.view = 'patient'; await this.loadPatientData(); }
+        },
+        registerPatient() {
+          this.state.view = this.state.view === 'register' ? 'login' : 'register';
+        },
+        logout() {
+          this.state.token = null;
+          this.state.user = null;
+          this.state.view = 'login';
+          this.state.error = '';
+          this.state.info = 'Logged out';
+        },
+        async loadAdminData() {
+          const [summary, doctors, patients, appointments, departments] = await Promise.all([
+            this.api({ method: 'GET', path: '/api/admin/dashboard' }),
+            this.api({ method: 'GET', path: '/api/admin/doctors' }),
+            this.api({ method: 'GET', path: '/api/admin/patients' }),
+            this.api({ method: 'GET', path: '/api/admin/appointments' }),
+            this.api({ method: 'GET', path: '/api/admin/departments' })
+          ]);
+          if (summary) this.state.admin.summary = summary;
+          if (Array.isArray(doctors)) this.state.admin.doctors = doctors;
+          if (Array.isArray(patients)) this.state.admin.patients = patients;
+          if (Array.isArray(appointments)) this.state.admin.appointments = appointments;
+          if (Array.isArray(departments)) this.state.admin.departments = departments;
+        },
+        async loadDoctorData() {
+          const dashboard = await this.api({ method: 'GET', path: '/api/doctor/dashboard' });
+          if (dashboard) {
+            this.state.doctor.upcoming = dashboard.upcoming_appointments || [];
+            this.state.doctor.patients = dashboard.assigned_patients || [];
+          }
+        },
+        async loadPatientData() {
+          const [dashboard, upcoming, history] = await Promise.all([
+            this.api({ method: 'GET', path: '/api/patient/dashboard' }),
+            this.api({ method: 'GET', path: '/api/patient/appointments' }),
+            this.api({ method: 'GET', path: '/api/patient/history' })
+          ]);
+          if (dashboard) {
+            this.state.patient.departments = dashboard.departments || [];
+            this.state.patient.availability = dashboard.doctor_availability || {};
+          }
+          if (Array.isArray(upcoming)) this.state.patient.upcoming = upcoming;
+          if (Array.isArray(history)) this.state.patient.history = history;
+        }
+      }
+    });
+
+    app.mount('#app');
+  </script>
+</body>
+</html>
