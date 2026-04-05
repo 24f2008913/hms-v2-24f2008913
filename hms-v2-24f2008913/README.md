@@ -71,3 +71,10 @@ celery -A backend.celery_worker.celery_app beat --loglevel=info
 - JWT token is stored in memory on frontend runtime.
 - Double booking prevention is enforced server-side with `409` response.
 - Status transition rules are enforced on both route logic and dashboard actions.
+
+## Appointment and Treatment Rules
+- New appointments always start as `Booked`.
+- Doctors can mark `Booked` appointments as `Completed` or `Cancelled`.
+- Patients can cancel only `Booked` appointments.
+- No route allows moving a `Completed` or `Cancelled` appointment back to `Booked`.
+- Treatment save endpoint also marks a `Booked` appointment as `Completed`.
