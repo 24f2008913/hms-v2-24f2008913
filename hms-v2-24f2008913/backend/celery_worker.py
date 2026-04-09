@@ -8,12 +8,13 @@ flask_app = create_app()
 
 
 def make_celery(app):
+    celery_settings = app.config.get("CELERY", {})
     celery = Celery(
         app.import_name,
-        broker=app.config["CELERY_BROKER_URL"],
-        backend=app.config["CELERY_RESULT_BACKEND"],
+        broker=celery_settings.get("broker_url"),
+        backend=celery_settings.get("result_backend"),
     )
-    celery.conf.update(app.config)
+    celery.conf.update(celery_settings)
     celery.conf.beat_schedule = {
         "daily-reminder-8am": {
             "task": "jobs.daily_reminder.send_daily_reminders",

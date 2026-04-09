@@ -1,13 +1,34 @@
 from datetime import date, datetime, timedelta
+import re
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 
-from backend.app import cache, role_required
+from backend.extensions import cache
 from backend.models import Appointment, Doctor, DoctorAvailability, Patient, Treatment, db
+from backend.security import role_required
 
 
 doctor_bp = Blueprint("doctor", __name__)
+
+TIME_24H_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+
+
+def _minutes(v):
+    h, m = v.split(":")
+    return int(h) * 60 + int(m)
+
+
+def _validate_slot_pair(start_value, end_value, label):
+    if not start_value and not end_value:
+        return None
+    if not start_value or not end_value:
+        return f"{label} start and end must both be set"
+    if not TIME_24H_RE.match(start_value) or not TIME_24H_RE.match(end_value):
+        return f"{label} time must be in HH:MM 24-hour format"
+    if _minutes(start_value) >= _minutes(end_value):
+        return f"{label} start time must be earlier than end time"
+    return None
 
 
 def _current_doctor():
@@ -100,6 +121,7 @@ def mark_completed(appointment_id):
 
     appt.status = "Completed"
     db.session.commit()
+    cache.delete("admin_dashboard")
     return jsonify({"message": "Appointment marked as completed"})
 
 
@@ -116,6 +138,7 @@ def mark_cancelled(appointment_id):
 
     appt.status = "Cancelled"
     db.session.commit()
+    cache.delete("admin_dashboard")
     return jsonify({"message": "Appointment marked as cancelled"})
 
 
@@ -126,6 +149,8 @@ def add_treatment(appointment_id):
     appt = Appointment.query.get_or_404(appointment_id)
     if appt.doctor_id != doctor.id:
         return jsonify({"error": "Forbidden"}), 403
+    if appt.status == "Cancelled":
+        return jsonify({"error": "Cannot save treatment for a cancelled appointment"}), 409
 
     data = request.get_json() or {}
     required = ["diagnosis", "prescription"]
@@ -154,16 +179,32 @@ def add_treatment(appointment_id):
         appt.status = "Completed"
 
     db.session.commit()
-    return jsonify({"message": "Treatment saved"}), 201
+    cache.delete("admin_dashboard")
+    return jsonify(
+        {
+            "message": "Treatment saved",
+            "treatment": {
+                "appointment_id": appt.id,
+                "diagnosis": treatment.diagnosis,
+                "prescription": treatment.prescription,
+                "notes": treatment.notes,
+                "next_visit_date": treatment.next_visit_date.isoformat() if treatment.next_visit_date else None,
+            },
+        }
+    ), 201
 
 
 @doctor_bp.get("/patients/<int:patient_id>/history")
 @role_required("doctor")
 def patient_history(patient_id):
     doctor = _current_doctor()
+    has_relationship = Appointment.query.filter_by(doctor_id=doctor.id, patient_id=patient_id).first()
+    if not has_relationship:
+        return jsonify({"error": "Forbidden"}), 403
+
     appts = (
-        Appointment.query.filter_by(doctor_id=doctor.id, patient_id=patient_id)
-        .order_by(Appointment.date.desc())
+        Appointment.query.filter_by(patient_id=patient_id)
+        .order_by(Appointment.date.desc(), Appointment.created_at.desc())
         .all()
     )
     if not appts:
@@ -174,6 +215,8 @@ def patient_history(patient_id):
         payload.append(
             {
                 "appointment_id": a.id,
+                "doctor_name": a.doctor.name,
+                "department": a.department.name,
                 "date": a.date.isoformat(),
                 "time_slot": a.time_slot,
                 "status": a.status,
@@ -198,7 +241,7 @@ def set_availability():
         return jsonify({"error": "availability list is required"}), 400
 
     today = date.today()
-    last_day = today + timedelta(days=7)
+    last_day = today + timedelta(days=6)
 
     for row in rows:
         try:
@@ -209,15 +252,30 @@ def set_availability():
         if avail_date < today or avail_date > last_day:
             return jsonify({"error": "Availability can only be set for next 7 days"}), 400
 
+        morning_start = row.get("morning_start")
+        morning_end = row.get("morning_end")
+        evening_start = row.get("evening_start")
+        evening_end = row.get("evening_end")
+
+        morning_error = _validate_slot_pair(morning_start, morning_end, "Morning")
+        if morning_error:
+            return jsonify({"error": morning_error, "date": avail_date.isoformat()}), 400
+        evening_error = _validate_slot_pair(evening_start, evening_end, "Evening")
+        if evening_error:
+            return jsonify({"error": evening_error, "date": avail_date.isoformat()}), 400
+
+        if not ((morning_start and morning_end) or (evening_start and evening_end)):
+            return jsonify({"error": "At least one slot (morning/evening) is required", "date": avail_date.isoformat()}), 400
+
         availability = DoctorAvailability.query.filter_by(doctor_id=doctor.id, date=avail_date).first()
         if not availability:
             availability = DoctorAvailability(doctor_id=doctor.id, date=avail_date)
             db.session.add(availability)
 
-        availability.morning_start = row.get("morning_start")
-        availability.morning_end = row.get("morning_end")
-        availability.evening_start = row.get("evening_start")
-        availability.evening_end = row.get("evening_end")
+        availability.morning_start = morning_start
+        availability.morning_end = morning_end
+        availability.evening_start = evening_start
+        availability.evening_end = evening_end
 
     db.session.commit()
     cache.delete(f"doctor_availability_{doctor.id}")

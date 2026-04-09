@@ -64,6 +64,7 @@ class Patient(db.Model):
     address = db.Column(db.Text, nullable=True)
 
     appointments = db.relationship("Appointment", backref="patient", lazy=True)
+    documents = db.relationship("MedicalDocument", backref="patient", lazy=True, cascade="all, delete-orphan")
 
 
 class DoctorAvailability(db.Model):
@@ -107,3 +108,14 @@ class Treatment(db.Model):
     notes = db.Column(db.Text, nullable=True)
     next_visit_date = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class MedicalDocument(db.Model):
+    __tablename__ = "medical_documents"
+
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    stored_filename = db.Column(db.String(255), nullable=False, unique=True)
+    content_type = db.Column(db.String(120), nullable=True)
+    uploaded_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)

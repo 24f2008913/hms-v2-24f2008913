@@ -2,8 +2,8 @@ from datetime import date
 
 from flask_mail import Message
 
-from backend.app import mail
 from backend.celery_worker import celery_app
+from backend.extensions import mail
 from backend.models import Appointment
 
 

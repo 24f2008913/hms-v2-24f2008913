@@ -47,6 +47,12 @@ Additional:
    python create_db.py
    ```
 
+### Windows One-Time Setup
+Run:
+```bat
+setup.bat
+```
+
 ## Run Application
 From project root:
 ```bash
@@ -54,6 +60,17 @@ python -m backend.app
 ```
 
 Open `http://127.0.0.1:5000/`.
+
+### Windows Run All Services
+Start Flask + Celery worker + Celery beat + Redis (if available):
+```bat
+run_all_servers.bat
+```
+
+Stop processes:
+```bat
+stop_all_servers.bat
+```
 
 ## Run Celery Worker
 ```bash
