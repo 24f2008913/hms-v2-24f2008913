@@ -95,10 +95,83 @@
 
     .compact-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
-    .auth-wrap { margin-top: 1.5rem; }
+    .auth-wrap { margin-top: 0.8rem; }
+    .auth-stage {
+      max-width: 1040px;
+      margin: 0 auto;
+      min-height: calc(100vh - 210px);
+      display: flex;
+      align-items: center;
+    }
+    .auth-grid {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.9fr) minmax(400px, 1.1fr);
+      gap: 1rem;
+      align-items: center;
+      width: 100%;
+    }
+
+    .auth-side {
+      border: 0;
+      background:
+        linear-gradient(165deg, rgba(15, 23, 42, 0.92), rgba(30, 64, 175, 0.88)),
+        radial-gradient(500px 250px at 100% -20%, rgba(110, 231, 183, 0.25), transparent 60%);
+      color: #e8f1ff;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
+    }
+
+    .auth-side .card-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      height: 100%;
+    }
+
+    .auth-side h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .auth-side p {
+      margin: 0;
+      color: rgba(232, 241, 255, 0.84);
+      line-height: 1.45;
+    }
+
+    .auth-role-list {
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .auth-role-item {
+      border-radius: 11px;
+      border: 1px solid rgba(191, 219, 254, 0.28);
+      background: rgba(15, 23, 42, 0.28);
+      padding: 0.6rem 0.75rem;
+    }
+
+    .auth-role-item strong {
+      display: block;
+      font-size: 0.87rem;
+      margin-bottom: 0.12rem;
+      color: #ffffff;
+    }
+
+    .auth-role-item span {
+      font-size: 0.8rem;
+      color: rgba(232, 241, 255, 0.84);
+    }
+
     .auth-card { border: 0; box-shadow: 0 18px 38px rgba(15, 23, 42, 0.16); }
+    .auth-main .card-body { padding: 1.35rem 1.5rem; }
+    .auth-main { min-height: 360px; display: flex; align-items: center; }
     .auth-card .form-control,
     .auth-card .form-select { border-radius: 10px; padding: 0.72rem 0.85rem; }
+    .auth-title { margin: 0 0 0.25rem; font-size: 1.55rem; font-weight: 700; }
+    .auth-subtitle { margin: 0 0 1rem; color: #667487; font-size: 0.9rem; }
 
     .availability-row {
       padding: 0.9rem;
@@ -131,6 +204,15 @@
       background: #f8fbff;
       border: 1px solid rgba(13, 110, 253, 0.09);
       padding: 0.75rem;
+      max-height: 112px;
+      overflow-y: auto;
+    }
+
+    .patient-quick-nav {
+      position: sticky;
+      top: 8px;
+      z-index: 5;
+      backdrop-filter: blur(2px);
     }
 
     .doctor-summary {
@@ -142,8 +224,31 @@
 
     .table { font-size: 0.95rem; }
 
+    .export-status {
+      border-radius: 12px;
+      border: 1px solid var(--hms-line);
+      background: #f8fbff;
+      padding: 0.75rem 0.9rem;
+    }
+
+    .export-state-badge {
+      font-size: 0.74rem;
+      letter-spacing: 0.2px;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 1100px) {
+      .auth-stage { min-height: auto; }
+      .auth-grid { grid-template-columns: 1fr; }
+      .auth-side { order: 2; }
+      .auth-main { order: 1; }
+    }
+
     @media (max-width: 768px) {
       .auth-wrap { margin-top: 0.5rem; }
+      .auth-side .card-body { padding: 1rem; }
+      .auth-main .card-body { padding: 1rem; }
+      .auth-main { min-height: auto; }
       .dashboard-grid.two-col,
       .dashboard-grid.three-col { grid-template-columns: 1fr; }
       .hero-bar { align-items: flex-start; }
@@ -180,18 +285,34 @@
   </div>
 
   <script type="text/x-template" id="login-template">
-    <div class="row justify-content-center auth-wrap">
-      <div class="col-md-5">
-        <div class="card auth-card">
+    <div class="auth-stage auth-wrap">
+      <div class="auth-grid">
+        <div class="card auth-side">
           <div class="card-body">
-            <h2 class="h4 mb-3">Login</h2>
+            <div>
+              <h2>Welcome to HMS</h2>
+              <p>Single system for appointment booking, treatment tracking, and role-based workflows.</p>
+            </div>
+            <div class="auth-role-list">
+              <div class="auth-role-item"><strong>Admin Access</strong><span>Manage doctors, patients, appointments, and availability.</span></div>
+              <div class="auth-role-item"><strong>Doctor Access</strong><span>Manage schedules, update treatment notes, and review patient history.</span></div>
+              <div class="auth-role-item"><strong>Patient Access</strong><span>Book appointments, upload reports, and export your treatment records.</span></div>
+            </div>
+            <p class="small">Use your username or email to sign in.</p>
+          </div>
+        </div>
+
+        <div class="card auth-card auth-main">
+          <div class="card-body">
+            <h2 class="auth-title">Login</h2>
+            <p class="auth-subtitle">Continue to your dashboard.</p>
             <div class="mb-3">
               <label class="form-label">Username or Email</label>
-              <input v-model="form.username" class="form-control" />
+              <input v-model="form.username" class="form-control" placeholder="Enter username or email" />
             </div>
             <div class="mb-3">
               <label class="form-label">Password</label>
-              <input v-model="form.password" type="password" class="form-control" />
+              <input v-model="form.password" type="password" class="form-control" placeholder="Enter password" />
             </div>
             <button class="btn btn-primary w-100" @click="submit">Login</button>
             <button class="btn btn-link w-100 mt-2" @click="$emit('register')">New patient? Register</button>
@@ -202,11 +323,27 @@
   </script>
 
   <script type="text/x-template" id="register-template">
-    <div class="row justify-content-center auth-wrap">
-      <div class="col-md-7">
-        <div class="card auth-card">
+    <div class="auth-stage auth-wrap">
+      <div class="auth-grid">
+        <div class="card auth-side">
           <div class="card-body">
-            <h2 class="h4 mb-3">Patient Registration</h2>
+            <div>
+              <h2>Patient Registration</h2>
+              <p>Create your account to book appointments, view treatment history, and download reports anytime.</p>
+            </div>
+            <div class="auth-role-list">
+              <div class="auth-role-item"><strong>Fast Booking</strong><span>Find doctors by date, specialization, and open slot.</span></div>
+              <div class="auth-role-item"><strong>Medical Documents</strong><span>Upload and download your reports securely.</span></div>
+              <div class="auth-role-item"><strong>CSV Export</strong><span>Get treatment-backed records in one click.</span></div>
+            </div>
+            <p class="small">All fields can be updated later from the patient dashboard.</p>
+          </div>
+        </div>
+
+        <div class="card auth-card auth-main">
+          <div class="card-body">
+            <h2 class="auth-title">Create Account</h2>
+            <p class="auth-subtitle">Register as a patient.</p>
             <div class="row g-2">
               <div class="col-md-6"><input v-model="form.username" class="form-control" placeholder="Username" /></div>
               <div class="col-md-6"><input v-model="form.email" class="form-control" placeholder="Email" /></div>
@@ -607,6 +744,22 @@
         </div>
       </div>
 
+      <div class="card section-card mb-3 patient-quick-nav">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <div class="compact-actions">
+              <button class="btn btn-sm btn-outline-primary" @click="jumpTo('booking-section')">Book</button>
+              <button class="btn btn-sm btn-outline-primary" @click="jumpTo('availability-section')">Availability</button>
+              <button class="btn btn-sm btn-outline-primary" @click="jumpTo('upcoming-section')">Upcoming</button>
+              <button class="btn btn-sm btn-outline-primary" @click="jumpTo('history-section')">History</button>
+              <button class="btn btn-sm btn-outline-primary" @click="jumpTo('documents-section')">Documents</button>
+              <button class="btn btn-sm btn-outline-primary" @click="jumpTo('profile-export-section')">Profile/Export</button>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" @click="refreshOverview">Refresh DB Data</button>
+          </div>
+        </div>
+      </div>
+
       <div class="card section-card mb-3">
         <div class="card-body">
           <div class="section-header">
@@ -631,7 +784,7 @@
         </div>
       </div>
 
-      <div class="card section-card mb-3">
+      <div id="booking-section" class="card section-card mb-3">
         <div class="card-body">
           <div class="section-header">
             <div>
@@ -714,13 +867,14 @@
         </div>
       </div>
 
-      <div class="card section-card mb-3">
+      <div id="availability-section" class="card section-card mb-3">
         <div class="card-body">
           <div class="section-header">
             <div>
               <h3 class="section-title">7-Day Availability Overview</h3>
               <p class="section-subtitle">Doctors by specialization and their upcoming 7-day availability.</p>
             </div>
+            <div class="small text-muted">Last refreshed: {{ state.patient.availabilityUpdatedAt || '-' }}</div>
           </div>
           <div class="row g-3">
             <div class="col-md-6" v-for="d in state.patient.availabilityOverview" :key="'ov-' + d.id">
@@ -741,7 +895,7 @@
         </div>
       </div>
 
-      <div class="card section-card mb-3">
+      <div id="upcoming-section" class="card section-card mb-3">
         <div class="card-body table-responsive">
           <div class="section-header">
             <div>
@@ -795,7 +949,7 @@
         </div>
       </div>
 
-      <div class="card section-card mb-3">
+      <div id="history-section" class="card section-card mb-3">
         <div class="card-body table-responsive">
           <div class="section-header">
             <div>
@@ -814,53 +968,70 @@
         </div>
       </div>
 
-      <div class="card section-card mb-3">
-        <div class="card-body">
-          <div class="section-header">
-            <div>
-              <h3 class="section-title">Medical History Documents</h3>
-              <p class="section-subtitle">Upload your reports and download them anytime.</p>
+      <div id="documents-section" class="dashboard-grid two-col mb-3">
+        <div class="card section-card">
+          <div class="card-body">
+            <div class="section-header">
+              <div>
+                <h3 class="section-title">Medical History Documents</h3>
+                <p class="section-subtitle">Upload your reports and download them anytime.</p>
+              </div>
+            </div>
+            <div class="row g-2 align-items-end">
+              <div class="col-md-8"><input type="file" class="form-control" @change="onMedicalFileChange" /></div>
+              <div class="col-md-4 d-grid"><button class="btn btn-primary" @click="uploadMedicalDocument">Upload Document</button></div>
+            </div>
+            <ul class="list-group mt-3" v-if="state.patient.documents.length">
+              <li class="list-group-item d-flex justify-content-between align-items-center" v-for="doc in state.patient.documents" :key="doc.id">
+                <span>{{ doc.filename }} <span class="doctor-subtle">({{ doc.uploaded_at }})</span></span>
+                <button class="btn btn-sm btn-outline-primary" @click="downloadMedicalDocument(doc.download_url)">Download</button>
+              </li>
+            </ul>
+            <div class="small text-muted mt-3" v-else>No documents uploaded yet.</div>
+          </div>
+        </div>
+
+        <div id="profile-export-section" class="dashboard-grid">
+          <div class="card section-card">
+            <div class="card-body">
+              <div class="section-header">
+                <div>
+                  <h3 class="section-title">Edit Profile</h3>
+                  <p class="section-subtitle">Update contact details and address.</p>
+                </div>
+              </div>
+              <div class="dashboard-grid two-col">
+                <input v-model="profile.name" class="form-control" placeholder="Name" />
+                <input v-model="profile.contact" class="form-control" placeholder="Contact" />
+                <input v-model="profile.date_of_birth" type="date" class="form-control" />
+                <input v-model="profile.address" class="form-control" placeholder="Address" />
+              </div>
+              <div class="compact-actions mt-3"><button class="btn btn-primary" @click="saveProfile">Update Profile</button></div>
             </div>
           </div>
-          <div class="row g-2 align-items-end">
-            <div class="col-md-8"><input type="file" class="form-control" @change="onMedicalFileChange" /></div>
-            <div class="col-md-4 d-grid"><button class="btn btn-primary" @click="uploadMedicalDocument">Upload Document</button></div>
-          </div>
-          <ul class="list-group mt-3" v-if="state.patient.documents.length">
-            <li class="list-group-item d-flex justify-content-between align-items-center" v-for="doc in state.patient.documents" :key="doc.id">
-              <span>{{ doc.filename }} <span class="doctor-subtle">({{ doc.uploaded_at }})</span></span>
-              <button class="btn btn-sm btn-outline-primary" @click="downloadMedicalDocument(doc.download_url)">Download</button>
-            </li>
-          </ul>
-          <div class="small text-muted mt-3" v-else>No documents uploaded yet.</div>
-        </div>
-      </div>
 
-      <div class="card section-card mb-3">
-        <div class="card-body">
-          <div class="section-header">
-            <div>
-              <h3 class="section-title">Edit Profile</h3>
-              <p class="section-subtitle">Update contact details and address.</p>
+          <div class="card section-card">
+            <div class="card-body">
+              <div class="section-header mb-2">
+                <div>
+                  <h3 class="section-title mb-1">Export Appointment CSV</h3>
+                  <p class="section-subtitle mb-0">One-click export. File auto-downloads when ready.</p>
+                </div>
+                <button class="btn btn-success" @click="exportCsv">Export</button>
+              </div>
+
+              <div class="export-status" v-if="exportJob.task_id">
+                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                  <span class="badge text-bg-primary export-state-badge">{{ exportJob.state || 'PENDING' }}</span>
+                  <div class="small text-muted">Task: {{ exportJob.task_id }}</div>
+                </div>
+                <div class="compact-actions mt-2" v-if="exportJob.download_link">
+                  <button class="btn btn-sm btn-outline-success" @click="downloadExport(exportJob.download_link)">Download Again</button>
+                  <div class="small text-muted">{{ exportJob.filename || 'CSV ready' }}</div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="dashboard-grid two-col">
-            <input v-model="profile.name" class="form-control" placeholder="Name" />
-            <input v-model="profile.contact" class="form-control" placeholder="Contact" />
-            <input v-model="profile.date_of_birth" type="date" class="form-control" />
-            <input v-model="profile.address" class="form-control" placeholder="Address" />
-          </div>
-          <div class="compact-actions mt-3"><button class="btn btn-primary" @click="saveProfile">Update Profile</button></div>
-        </div>
-      </div>
-
-      <div class="card section-card">
-        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
-          <div>
-            <h3 class="section-title mb-1">Export Appointment CSV</h3>
-            <p class="section-subtitle mb-0">Trigger async export and get status by task ID.</p>
-          </div>
-          <button class="btn btn-success" @click="exportCsv">Export</button>
         </div>
       </div>
     </div>
@@ -1169,6 +1340,7 @@
           booking: { date: today, time_slot: '', department_id: null },
           profile: { name: '', contact: '', date_of_birth: '', address: '' },
           latestTaskId: '',
+          exportJob: { task_id: '', state: '', download_link: '', filename: '' },
           selectedDoctor: null,
           availableSlots: [],
           selectedSlot: '',
@@ -1179,6 +1351,33 @@
       },
       mounted() { this.$emit('load-patient'); this.findDoctorsByDate(); this.loadMedicalDocuments(); },
       methods: {
+        jumpTo(id) {
+          const el = document.getElementById(id);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+        async refreshOverview() {
+          const [dashboard, doctors, upcoming, history, documents] = await Promise.all([
+            this.api({ method: 'GET', path: '/api/patient/dashboard' }),
+            this.api({ method: 'GET', path: '/api/patient/doctors' }),
+            this.api({ method: 'GET', path: '/api/patient/appointments' }),
+            this.api({ method: 'GET', path: '/api/patient/history' }),
+            this.api({ method: 'GET', path: '/api/patient/medical-documents' })
+          ]);
+          if (dashboard) {
+            this.state.patient.departments = dashboard.departments || [];
+            this.state.patient.availability = dashboard.doctor_availability || {};
+          }
+          if (Array.isArray(doctors)) {
+            this.state.patient.availabilityOverview = doctors;
+            this.state.patient.availabilityUpdatedAt = new Date().toLocaleTimeString();
+          }
+          if (Array.isArray(upcoming)) this.state.patient.upcoming = upcoming;
+          if (Array.isArray(history)) this.state.patient.history = history;
+          if (Array.isArray(documents)) this.state.patient.documents = documents;
+
+          await this.findDoctorsByDate();
+          this.state.info = 'Patient dashboard refreshed from latest DB data.';
+        },
         async findDoctorsByDate() {
           if (!this.preferredDate) {
             this.state.error = 'Please choose a preferred date first';
@@ -1321,14 +1520,57 @@
           }
         },
         async exportCsv() {
-          const data = await this.api({ method: 'GET', path: '/api/patient/export-csv', message: 'CSV export triggered' });
-          if (data && data.task_id) {
-            this.latestTaskId = data.task_id;
-            setTimeout(async () => {
-              const status = await this.api({ method: 'GET', path: `/api/patient/export-csv/status/${this.latestTaskId}` });
-              if (status && status.state) this.state.info = `CSV Task ${status.state}. ${status.download_link || ''}`;
-            }, 3000);
+          const data = await this.api({ method: 'GET', path: '/api/patient/export-csv', message: 'CSV export started. Preparing file...' });
+          if (!(data && data.task_id)) return;
+
+          this.latestTaskId = data.task_id;
+          this.exportJob = { task_id: data.task_id, state: 'PENDING', download_link: '', filename: '' };
+          const maxPolls = 20;
+
+          for (let i = 0; i < maxPolls; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            const status = await this.api({ method: 'GET', path: `/api/patient/export-csv/status/${this.latestTaskId}` });
+            if (!status || !status.state) continue;
+
+            this.exportJob.state = status.state;
+
+            if (status.state === 'PENDING' || status.state === 'STARTED' || status.state === 'RETRY') {
+              this.state.info = `CSV Task ${status.state}...`;
+              continue;
+            }
+
+            if (status.state === 'SUCCESS') {
+              const link = status.download_link || (status.result && status.result.download_link);
+              const filename = (status.result && status.result.filename) || '';
+              if (link) {
+                this.exportJob.download_link = link;
+                this.exportJob.filename = filename;
+                this.downloadExport(link);
+                this.state.info = 'CSV export completed. Download started.';
+              } else {
+                this.state.info = 'CSV export completed, but no download link was returned.';
+              }
+              return;
+            }
+
+            if (status.state === 'FAILURE') {
+              this.state.error = `CSV export failed: ${status.error || 'Unknown error'}`;
+              return;
+            }
+
+            this.state.info = `CSV Task ${status.state}.`;
           }
+
+          this.state.error = 'CSV export is taking longer than expected. Please try again in a few seconds.';
+        },
+        downloadExport(link) {
+          if (!link) return;
+          const a = document.createElement('a');
+          a.href = link;
+          a.download = '';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
         }
       }
     };
@@ -1344,7 +1586,7 @@
             info: '',
             admin: { summary: {}, doctors: [], patients: [], appointments: [], departments: [], searchResults: [] },
             doctor: { upcoming: [], patients: [] },
-            patient: { departments: [], doctors: [], availability: {}, availabilityOverview: [], upcoming: [], history: [], documents: [] }
+            patient: { departments: [], doctors: [], availability: {}, availabilityOverview: [], upcoming: [], history: [], documents: [], availabilityUpdatedAt: '' }
           },
           refreshTimer: null
         };
@@ -1447,7 +1689,10 @@
             this.state.patient.departments = dashboard.departments || [];
             this.state.patient.availability = dashboard.doctor_availability || {};
           }
-          if (Array.isArray(doctors)) this.state.patient.availabilityOverview = doctors;
+          if (Array.isArray(doctors)) {
+            this.state.patient.availabilityOverview = doctors;
+            this.state.patient.availabilityUpdatedAt = new Date().toLocaleTimeString();
+          }
           if (Array.isArray(upcoming)) this.state.patient.upcoming = upcoming;
           if (Array.isArray(history)) this.state.patient.history = history;
           if (Array.isArray(documents)) this.state.patient.documents = documents;

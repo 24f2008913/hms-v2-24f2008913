@@ -228,11 +228,6 @@ def dashboard():
 @role_required("patient")
 def list_doctors():
     q = (request.args.get("q") or "").strip().lower()
-    cache_key = f"patient_doctors_q_{q or 'none'}"
-    cached = cache.get(cache_key)
-    active_count = db.session.query(Doctor).join(User).filter(User.is_active.is_(True)).count()
-    if cached is not None and (len(cached) > 0 or active_count == 0):
-        return jsonify(cached)
 
     doctors_query = Doctor.query
     if q:
@@ -281,7 +276,6 @@ def list_doctors():
         for d in doctors
         if d.user.is_active
     ]
-    cache.set(cache_key, payload, timeout=300)
     return jsonify(payload)
 
 

@@ -279,6 +279,7 @@ def set_availability():
 
     db.session.commit()
     cache.delete(f"doctor_availability_{doctor.id}")
+    cache.clear()
 
     return jsonify({"message": "Availability updated"})
 
